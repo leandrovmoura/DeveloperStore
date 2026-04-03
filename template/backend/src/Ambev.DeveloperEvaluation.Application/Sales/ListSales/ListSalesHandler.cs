@@ -1,13 +1,14 @@
 using AutoMapper;
 using MediatR;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
+using Ambev.DeveloperEvaluation.Common.Pagination;
 
 namespace Ambev.DeveloperEvaluation.Application.Sales.ListSales;
 
 /// <summary>
 /// Handler for processing ListSalesQuery
 /// </summary>
-public class ListSalesHandler : IRequestHandler<ListSalesQuery, List<ListSalesResult>>
+public class ListSalesHandler : IRequestHandler<ListSalesQuery, PagedResult<ListSalesResult>>
 {
     private readonly ISaleRepository _saleRepository;
     private readonly IMapper _mapper;
@@ -18,13 +19,28 @@ public class ListSalesHandler : IRequestHandler<ListSalesQuery, List<ListSalesRe
         _mapper = mapper;
     }
 
-    public async Task<List<ListSalesResult>> Handle(ListSalesQuery query, CancellationToken cancellationToken)
+    public async Task<PagedResult<ListSalesResult>> Handle(ListSalesQuery query, CancellationToken cancellationToken)
     {
-        var sales = await _saleRepository.GetAllAsync(
+        const int maxPageSize = 100;
+        var pageSize = Math.Min(query.PageSize, maxPageSize);
+
+        var pagedSales = await _saleRepository.GetPagedAsync(
+            pageNumber: query.PageNumber,
+            pageSize: pageSize,
+            orderBy: query.OrderBy,
+            isDescending: query.IsDescending,
             includeItems: true,
             includeCancelled: query.IncludeCancelled,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
-        return _mapper.Map<List<ListSalesResult>>(sales);
+        var resultItems = _mapper.Map<List<ListSalesResult>>(pagedSales.Items);
+
+        return new PagedResult<ListSalesResult>
+        {
+            Items = resultItems,
+            PageNumber = pagedSales.PageNumber,
+            PageSize = pagedSales.PageSize,
+            TotalCount = pagedSales.TotalCount
+        };
     }
 }

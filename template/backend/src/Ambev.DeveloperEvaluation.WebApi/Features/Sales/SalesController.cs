@@ -92,18 +92,28 @@ public class SalesController : BaseController
     /// <summary>
     /// Retrieves all sales
     /// </summary>
+    /// <param name="pageNumber">The page number to retrieve</param>
+    /// <param name="pageSize">The number of items per page</param>
+    /// <param name="orderBy">The field to order by</param>
+    /// <param name="isDescending">Whether the order should be descending</param>
     /// <param name="includeCancelled">Whether to include cancelled sales</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of sales</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(ApiResponseWithData<List<ListSalesResponse>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ListSales([FromQuery] bool includeCancelled = false, CancellationToken cancellationToken = default)
+    [ProducesResponseType(typeof(ApiResponseWithData<PagedSalesResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListSales(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? orderBy = null,
+        [FromQuery] bool isDescending = false,
+        [FromQuery] bool includeCancelled = false,
+        CancellationToken cancellationToken = default)
     {
-        var query = new ListSalesQuery { IncludeCancelled = includeCancelled };
+        var query = new ListSalesQuery { PageNumber = pageNumber, PageSize = pageSize, OrderBy = orderBy, IsDescending = isDescending, IncludeCancelled = includeCancelled };
         var result = await _mediator.Send(query, cancellationToken);
-        var response = _mapper.Map<List<ListSalesResponse>>(result);
+        var response = _mapper.Map<PagedSalesResponse>(result);
 
-        return Ok(new ApiResponseWithData<List<ListSalesResponse>>
+        return Ok(new ApiResponseWithData<PagedSalesResponse>
         {
             Success = true,
             Message = "Sales retrieved successfully",

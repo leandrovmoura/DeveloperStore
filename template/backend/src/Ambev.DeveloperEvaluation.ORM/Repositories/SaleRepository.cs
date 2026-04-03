@@ -1,3 +1,4 @@
+using Ambev.DeveloperEvaluation.Common.Pagination;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 using Ambev.DeveloperEvaluation.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -75,9 +76,11 @@ public class SaleRepository : ISaleRepository
     /// </summary>
     public async Task<Sale> UpdateAsync(Sale sale, CancellationToken cancellationToken = default)
     {
-        _context.Sales.Update(sale);
+        var existingSale = _context.Update(sale);
+
         await _context.SaveChangesAsync(cancellationToken);
-        return sale;
+
+        return existingSale.Entity;
     }
 
     /// <summary>
@@ -114,5 +117,60 @@ public class SaleRepository : ISaleRepository
             .Include(s => s.Items)
             .Where(s => s.BranchId == branchId)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Retrieves a paged list of sales
+    /// </summary>
+    public async Task<PagedResult<Sale>> GetPagedAsync(int pageNumber, int pageSize, bool includeItems = true, bool includeCancelled = false, string? orderBy = null, bool isDescending = false, CancellationToken cancellationToken = default)
+    {
+        var query = _context.Sales.AsQueryable();
+        
+        // 1. Apply filtering (cancelled/active)
+        if (!includeCancelled) query = query.Where(s => !s.IsCancelled);
+        
+        // 2. Include items if needed
+        if (includeItems) query = query.Include(s => s.Items);
+        
+        // 3. Get total count
+        var totalCount = await query.CountAsync();
+
+        // 4. Apply ordering
+        query = ApplyOrdering(query, orderBy, isDescending);
+
+        // 5. Apply pagination
+        var items = await query.Skip((pageNumber - 1) * pageSize)
+                               .Take(pageSize)
+                               .ToListAsync();
+        
+        return new PagedResult<Sale> { Items = items, PageNumber = pageNumber, PageSize = pageSize, TotalCount = totalCount };
+    }
+
+    /// <summary>
+    /// Apply ordering to the list
+    /// </summary>
+    private static IQueryable<Sale> ApplyOrdering(
+        IQueryable<Sale> query, 
+        string? orderBy,
+        bool isDescending)
+    {
+        if (string.IsNullOrEmpty(orderBy))
+        {
+            return query.OrderByDescending(s => s.CreatedAt); // Default ordering
+        }
+        else
+        {
+            // Switch expression with all sortable fields
+            return orderBy.ToLower() switch
+            {
+                "saledate" => isDescending ? query.OrderByDescending(s => s.SaleDate) : query.OrderBy(s => s.SaleDate),
+                "salenumber" => isDescending ? query.OrderByDescending(s => s.SaleNumber) : query.OrderBy(s => s.SaleNumber),
+                "totalamount" => isDescending ? query.OrderByDescending(s => s.TotalAmount) : query.OrderBy(s => s.TotalAmount),
+                "customername" => isDescending ? query.OrderByDescending(s => s.CustomerName) : query.OrderBy(s => s.CustomerName),
+                "branchname" => isDescending ? query.OrderByDescending(s => s.BranchName) : query.OrderBy(s => s.BranchName),
+                "createdat" => isDescending ? query.OrderByDescending(s => s.CreatedAt) : query.OrderBy(s => s.CreatedAt),
+                _ => query.OrderByDescending(s => s.CreatedAt)  // Default
+            };
+        }
     }
 }

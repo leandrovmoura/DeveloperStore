@@ -1,3 +1,4 @@
+using Ambev.DeveloperEvaluation.Common.Pagination;
 using Ambev.DeveloperEvaluation.Domain.Entities;
 
 namespace Ambev.DeveloperEvaluation.Domain.Repositories;
@@ -71,4 +72,24 @@ public interface ISaleRepository
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of sales for the branch</returns>
     Task<List<Sale>> GetByBranchIdAsync(string branchId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves a paged list of sales
+    /// </summary>
+    /// <param name="pageNumber">The page number</param>
+    /// <param name="pageSize">The number of sales per page</param>    
+    /// <param name="includeItems">Whether to include sale items</param>
+    /// <param name="includeCancelled">Whether to include cancelled sales</param>
+    /// <param name="orderBy">Field name to sort</param>"
+    /// <param name="isDescending">Whether the order should be descending</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A paged result of sales</returns>
+    Task<PagedResult<Sale>> GetPagedAsync(
+        int pageNumber, 
+        int pageSize, 
+        bool includeItems = true, 
+        bool includeCancelled = false, 
+        string? orderBy = null, 
+        bool isDescending = false, 
+        CancellationToken cancellationToken = default);
 }
