@@ -32,7 +32,7 @@ public class Program
             builder.Services.AddDbContext<DefaultContext>(options =>
                 options.UseNpgsql(
                     builder.Configuration.GetConnectionString("DefaultConnection"),
-                    b => b.MigrationsAssembly("Ambev.DeveloperEvaluation.ORM")
+                    b => b.MigrationsAssembly("Ambev.DeveloperEvaluation.WebApi")
                 )
             );
 
@@ -40,7 +40,11 @@ public class Program
 
             builder.RegisterDependencies();
 
-            builder.Services.AddAutoMapper(typeof(Program).Assembly, typeof(ApplicationLayer).Assembly);
+            builder.Services.AddAutoMapper(cfg =>
+            {
+                cfg.AddMaps(typeof(Program).Assembly);
+                cfg.AddMaps(typeof(ApplicationLayer).Assembly);
+            });
 
             builder.Services.AddMediatR(cfg =>
             {
