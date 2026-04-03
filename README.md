@@ -2,6 +2,12 @@
 
 `READ CAREFULLY`
 
+## Implementation
+
+This sections describes the implementation and all information related with the application solution.
+
+See [DeveloperStore Implementation](/.doc/dev-store.md)
+
 ## Use Case
 
 **You are a developer on the DeveloperStore team. Now we need to implement the API prototypes.**
@@ -81,9 +87,3 @@ This section includes links to the detailed documentation for the different API 
 This section describes the overall structure and organization of the project files and directories.
 
 See [Project Structure](/.doc/project-structure.md)
-
-## Implementation
-
-This sections describes the implementation and all information related with the application solution.
-
-See [DeveloperStore Implementation](/.doc/dev-store.md)
