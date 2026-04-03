@@ -15,6 +15,7 @@
 This release introduces a **complete Sales CRUD API** with the following capabilities:
 
 ### **Core Features**
+
 - ✅ **Create Sales** with automatic discount calculation based on quantity
 - ✅ **Retrieve Sales** by ID or list all with filtering options
 - ✅ **Update Sales** with business rule validation
@@ -114,18 +115,18 @@ The solution follows **Clean Architecture** principles with clear separation of 
 
 ### **Design Patterns Applied**
 
-| Pattern | Purpose | Implementation Files |
-|---------|---------|---------------------|
-| **Clean Architecture** | Separation of concerns with dependency rule | Entire solution structure |
-| **Domain-Driven Design (DDD)** | Business logic in domain layer | `Sale.cs`, `SaleItem.cs` as aggregates |
-| **CQRS** | Separate read/write operations | All `*Command.cs` and `*Query.cs` files |
-| **MediatR** | Decoupled request handling | All `*Handler.cs` files |
-| **Repository Pattern** | Abstract data access | `ISaleRepository.cs`, `SaleRepository.cs` |
-| **Specification Pattern** | Encapsulate business rules | `ActiveSaleSpecification.cs`, etc. |
-| **External Identity Pattern** | Cross-domain references | CustomerId/CustomerName in `Sale.cs` |
-| **Aggregate Root** | Maintain consistency | `Sale` contains collection of `SaleItems` |
-| **Unit of Work** | Transaction management | EF Core `DbContext` |
-| **Dependency Injection** | Loose coupling | `InfrastructureModuleInitializer.cs` |
+| Pattern                        | Purpose                                     | Implementation Files                      |
+| ------------------------------ | ------------------------------------------- | ----------------------------------------- |
+| **Clean Architecture**         | Separation of concerns with dependency rule | Entire solution structure                 |
+| **Domain-Driven Design (DDD)** | Business logic in domain layer              | `Sale.cs`, `SaleItem.cs` as aggregates    |
+| **CQRS**                       | Separate read/write operations              | All `*Command.cs` and `*Query.cs` files   |
+| **MediatR**                    | Decoupled request handling                  | All `*Handler.cs` files                   |
+| **Repository Pattern**         | Abstract data access                        | `ISaleRepository.cs`, `SaleRepository.cs` |
+| **Specification Pattern**      | Encapsulate business rules                  | `ActiveSaleSpecification.cs`, etc.        |
+| **External Identity Pattern**  | Cross-domain references                     | CustomerId/CustomerName in `Sale.cs`      |
+| **Aggregate Root**             | Maintain consistency                        | `Sale` contains collection of `SaleItems` |
+| **Unit of Work**               | Transaction management                      | EF Core `DbContext`                       |
+| **Dependency Injection**       | Loose coupling                              | `InfrastructureModuleInitializer.cs`      |
 
 ---
 
@@ -136,6 +137,7 @@ The solution follows **Clean Architecture** principles with clear separation of 
 #### **Entities** (`Domain/Entities/`)
 
 **`Sale.cs`** - Aggregate Root
+
 ```csharp
 // Represents a complete sales transaction
 public class Sale : BaseEntity
@@ -143,27 +145,27 @@ public class Sale : BaseEntity
     // Identification
     public string SaleNumber { get; set; }           // Unique identifier
     public DateTime SaleDate { get; set; }           // Transaction date
-    
+
     // External Identity Pattern (Denormalization)
     public string CustomerId { get; set; }           // Reference to Customer domain
     public string CustomerName { get; set; }         // Cached for performance
     public string BranchId { get; set; }             // Reference to Branch domain
     public string BranchName { get; set; }           // Cached for performance
-    
+
     // Calculated Fields
     public decimal TotalAmount { get; set; }         // Sum of all items
-    
+
     // Status Management
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
-    
+
     // Audit Trail
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     // Aggregate Navigation
     public List<SaleItem> Items { get; set; }        // Child entities
-    
+
     // Business Methods
     public void CalculateTotalAmount()               // Recalculates total from items
     public void Cancel()                             // Marks sale as cancelled
@@ -174,29 +176,30 @@ public class Sale : BaseEntity
 **Reason**: The `Sale` entity encapsulates all business logic related to sales transactions, ensuring data integrity and business rule compliance at the domain level.
 
 **`SaleItem.cs`** - Value Entity
+
 ```csharp
 // Represents a line item within a sale
 public class SaleItem : BaseEntity
 {
     public Guid SaleId { get; set; }                 // Foreign key to parent
-    
+
     // External Identity Pattern
     public string ProductId { get; set; }            // Reference to Product domain
     public string ProductName { get; set; }          // Cached for performance
-    
+
     // Pricing & Quantity
     public int Quantity { get; set; }                // 1-20 allowed
     public decimal UnitPrice { get; set; }           // Price per unit
     public decimal Discount { get; set; }            // 0%, 10%, or 20%
     public decimal TotalAmount { get; set; }         // Calculated total
-    
+
     // Status
     public bool IsCancelled { get; set; }
     public DateTime? CancelledAt { get; set; }
-    
+
     // Navigation
     public Sale? Sale { get; set; }
-    
+
     // Business Methods
     public void CalculateDiscount()                  // Applies discount based on quantity
     public void CalculateTotalAmount()               // Calculates item total
@@ -212,15 +215,19 @@ public class SaleItem : BaseEntity
 **Purpose**: Encapsulate business rules in reusable, testable components.
 
 1. **`ActiveSaleSpecification.cs`**
+
    ```csharp
    public bool IsSatisfiedBy(Sale sale) => !sale.IsCancelled;
    ```
+
    **Reason**: Provides a reusable way to check if a sale is active, used in queries and business logic.
 
 2. **`SaleItemQuantitySpecification.cs`**
+
    ```csharp
    public bool IsSatisfiedBy(SaleItem item) => item.Quantity > 0 && item.Quantity <= 20;
    ```
+
    **Reason**: Enforces the business rule that quantities must be between 1 and 20.
 
 3. **`SaleItemDiscountSpecification.cs`**
@@ -239,6 +246,7 @@ public class SaleItem : BaseEntity
 #### **Validators** (`Domain/Validation/`)
 
 **`SaleValidator.cs`** - FluentValidation Rules
+
 ```csharp
 public class SaleValidator : AbstractValidator<Sale>
 {
@@ -257,6 +265,7 @@ public class SaleValidator : AbstractValidator<Sale>
 **Reason**: Provides declarative validation that's easy to read, maintain, and test. Validates the entire aggregate consistently.
 
 **`SaleItemValidator.cs`** - Business Rule Validation
+
 ```csharp
 public class SaleItemValidator : AbstractValidator<SaleItem>
 {
@@ -265,7 +274,7 @@ public class SaleItemValidator : AbstractValidator<SaleItem>
         RuleFor(item => item.Quantity).InclusiveBetween(1, 20);
         RuleFor(item => item.UnitPrice).GreaterThan(0);
         RuleFor(item => item.Discount).InclusiveBetween(0, 0.20m);
-        
+
         // Business rule: No discount below 4 items
         RuleFor(item => item)
             .Must(item => item.Quantity >= 4 || item.Discount == 0)
@@ -290,6 +299,7 @@ public class SaleItemValidator : AbstractValidator<SaleItem>
 #### **Repository Interface** (`Domain/Repositories/`)
 
 **`ISaleRepository.cs`** - Data Access Contract
+
 ```csharp
 public interface ISaleRepository
 {
@@ -315,26 +325,31 @@ public interface ISaleRepository
 Each command follows the same structure: Command → Validator → Handler → Result
 
 **`CreateSale/`** - Create new sale
+
 - **Files**: `CreateSaleCommand.cs`, `CreateSaleHandler.cs`, `CreateSaleValidator.cs`, `CreateSaleResult.cs`, `CreateSaleProfile.cs`
 - **Flow**: Validates input → Checks duplicate sale number → Maps to entity → Applies business rules (discount calculation) → Saves to repository → Publishes `SaleCreatedEvent` → Returns result
 - **Reason**: Encapsulates the entire sale creation workflow with all validation and business logic
 
 **`UpdateSale/`** - Modify existing sale
+
 - **Files**: `UpdateSaleCommand.cs`, `UpdateSaleHandler.cs`, `UpdateSaleValidator.cs`, `UpdateSaleResult.cs`, `UpdateSaleProfile.cs`
 - **Flow**: Validates input → Retrieves existing sale → Checks if cancelled → Updates properties → Recalculates totals → Saves → Publishes `SaleModifiedEvent`
 - **Reason**: Ensures safe updates with business rule validation and audit trail
 
 **`CancelSale/`** - Cancel entire sale
+
 - **Files**: `CancelSaleCommand.cs`, `CancelSaleHandler.cs`, `CancelSaleProfile.cs`, `CancelSaleResult.cs`
 - **Flow**: Retrieves sale → Checks if already cancelled → Marks as cancelled → Updates timestamps → Publishes `SaleCancelledEvent`
 - **Reason**: Provides soft delete functionality with complete audit trail
 
 **`CancelSaleItem/`** - Cancel individual item
+
 - **Files**: `CancelSaleItemCommand.cs`, `CancelSaleItemHandler.cs`, `CancelSaleItemResult.cs`
 - **Flow**: Retrieves sale → Finds item → Checks if cancelled → Marks item as cancelled → Recalculates sale total → Publishes `ItemCancelledEvent`
 - **Reason**: Allows partial cancellations without affecting entire sale
 
 **`DeleteSale/`** - Permanently remove sale
+
 - **Files**: `DeleteSaleCommand.cs`, `DeleteSaleHandler.cs`, `DeleteSaleResult.cs`
 - **Flow**: Checks if sale exists → Deletes from repository (cascade deletes items)
 - **Reason**: Provides hard delete for administrative purposes
@@ -342,11 +357,13 @@ Each command follows the same structure: Command → Validator → Handler → R
 #### **Queries** - Read Operations
 
 **`GetSale/`** - Retrieve single sale
+
 - **Files**: `GetSaleQuery.cs`, `GetSaleHandler.cs`, `GetSaleProfile.cs`, `GetSaleResult.cs`
 - **Flow**: Queries repository by ID → Maps to result DTO → Returns with all items
 - **Reason**: Optimized for retrieving complete sale details with related entities
 
 **`ListSales/`** - Retrieve all sales
+
 - **Files**: `ListSalesQuery.cs`, `ListSalesHandler.cs`, `ListSalesProfile.cs`, `ListSalesResult.cs`
 - **Flow**: Queries repository with filters → Maps to result DTOs → Returns collection
 - **Reason**: Provides filtering options (include cancelled, include items) for flexible querying
@@ -354,6 +371,7 @@ Each command follows the same structure: Command → Validator → Handler → R
 #### **AutoMapper Profiles**
 
 Each use case has its own profile mapping commands/queries to entities and results:
+
 - Command → Entity (for create/update)
 - Entity → Result DTO (for queries)
 - Keeps mapping logic close to use cases
@@ -382,7 +400,8 @@ public class SalesController : BaseController
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - RESTful design follows HTTP standards
 - Clear, predictable URL structure
 - Proper HTTP verbs for operations
@@ -393,16 +412,19 @@ public class SalesController : BaseController
 **Purpose**: Decouple API contracts from domain entities
 
 **Request DTOs**: Define input from clients
+
 - `CreateSaleRequest`, `UpdateSaleRequest`
 - Validation attributes for basic validation
 - Separate validators for complex validation
 
 **Response DTOs**: Define output to clients
+
 - `CreateSaleResponse`, `GetSaleResponse`, `ListSalesResponse`
 - Only include necessary fields
 - Hide internal domain details
 
-**Reason**: 
+**Reason**:
+
 - API contracts independent of domain changes
 - Prevents over-posting attacks
 - Enables API versioning
@@ -426,7 +448,8 @@ public class ValidationExceptionMiddleware
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - **Before**: Only handled `ValidationException`, other exceptions caused 500 errors or crashes
 - **After**: Proper HTTP status codes for all exception types
 - Consistent error response format
@@ -445,26 +468,27 @@ public class ValidationExceptionMiddleware
 public class SaleRepository : ISaleRepository
 {
     private readonly DefaultContext _context;
-    
+
     public async Task<Sale> CreateAsync(Sale sale, CancellationToken cancellationToken)
     {
         await _context.Sales.AddAsync(sale, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return sale;
     }
-    
+
     public async Task<Sale?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         return await _context.Sales
             .Include(s => s.Items)  // Eager loading for performance
             .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
-    
+
     // ... other methods
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - EF Core implementation hides database details from domain
 - Eager loading prevents N+1 query problems
 - Async/await for scalability
@@ -473,6 +497,7 @@ public class SaleRepository : ISaleRepository
 #### **Entity Configurations** (`ORM/Mapping/`)
 
 **`SaleConfiguration.cs`**:
+
 ```csharp
 public void Configure(EntityTypeBuilder<Sale> builder)
 {
@@ -481,13 +506,13 @@ public void Configure(EntityTypeBuilder<Sale> builder)
     builder.Property(s => s.SaleNumber).IsRequired().HasMaxLength(50);
     builder.HasIndex(s => s.SaleNumber).IsUnique();
     builder.Property(s => s.TotalAmount).HasPrecision(18, 2);
-    
+
     // Relationship configuration
     builder.HasMany(s => s.Items)
            .WithOne(i => i.Sale)
            .HasForeignKey(i => i.SaleId)
            .OnDelete(DeleteBehavior.Cascade);
-    
+
     // Performance indexes
     builder.HasIndex(s => s.CustomerId);
     builder.HasIndex(s => s.BranchId);
@@ -495,13 +520,15 @@ public void Configure(EntityTypeBuilder<Sale> builder)
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - Fluent API configuration keeps entities clean (no attributes)
 - Explicit relationship definition prevents errors
 - Indexes improve query performance
 - Cascade delete maintains referential integrity
 
 **`SaleItemConfiguration.cs`**:
+
 ```csharp
 public void Configure(EntityTypeBuilder<SaleItem> builder)
 {
@@ -511,14 +538,15 @@ public void Configure(EntityTypeBuilder<SaleItem> builder)
     builder.Property(i => i.UnitPrice).HasPrecision(18, 2);
     builder.Property(i => i.Discount).HasPrecision(5, 2);
     builder.Property(i => i.TotalAmount).HasPrecision(18, 2);
-    
+
     // Indexes for common queries
     builder.HasIndex(i => i.ProductId);
     builder.HasIndex(i => i.IsCancelled);
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - Decimal precision prevents rounding errors in financial calculations
 - Indexes on ProductId enable fast product-based queries
 - IsCancelled index improves reporting queries
@@ -545,14 +573,15 @@ public class DefaultContext : DbContext
 ```csharp
 public void Initialize(WebApplicationBuilder builder)
 {
-    builder.Services.AddScoped<DbContext>(provider => 
+    builder.Services.AddScoped<DbContext>(provider =>
         provider.GetRequiredService<DefaultContext>());
     builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<ISaleRepository, SaleRepository>();  // ADDED
 }
 ```
 
-**Reason**: 
+**Reason**:
+
 - Scoped lifetime appropriate for repository pattern (one instance per request)
 - Automatic disposal by DI container
 - Easy to swap implementations for testing
@@ -565,12 +594,12 @@ public void Initialize(WebApplicationBuilder builder)
 
 The system automatically calculates discounts based on quantity:
 
-| Quantity Range | Discount | Formula | Example |
-|---------------|----------|---------|---------|
-| **1-3 items** | **0%** | Price × Quantity | 3 × $100 = **$300.00** |
-| **4-9 items** | **10%** | Price × Quantity × 0.90 | 5 × $100 × 0.90 = **$450.00** |
-| **10-20 items** | **20%** | Price × Quantity × 0.80 | 12 × $50 × 0.80 = **$480.00** |
-| **> 20 items** | **INVALID** | Not allowed | ❌ **Validation Error** |
+| Quantity Range  | Discount    | Formula                 | Example                       |
+| --------------- | ----------- | ----------------------- | ----------------------------- |
+| **1-3 items**   | **0%**      | Price × Quantity        | 3 × $100 = **$300.00**        |
+| **4-9 items**   | **10%**     | Price × Quantity × 0.90 | 5 × $100 × 0.90 = **$450.00** |
+| **10-20 items** | **20%**     | Price × Quantity × 0.80 | 12 × $50 × 0.80 = **$480.00** |
+| **> 20 items**  | **INVALID** | Not allowed             | ❌ **Validation Error**       |
 
 ### **Implementation Flow**
 
@@ -608,6 +637,7 @@ sale.CalculateTotalAmount();
 ### **Business Restrictions**
 
 ✅ **Enforced Rules**:
+
 1. **Maximum 20 items per product** - Hard limit enforced by validator
 2. **No discounts below 4 items** - Validated in `SaleItemValidator`
 3. **Discount must match quantity tier** - Validated by `SaleItemDiscountSpecification`
@@ -623,6 +653,7 @@ sale.CalculateTotalAmount();
 ### **Purpose**
 
 Events provide a complete audit trail of all sale lifecycle operations, enabling:
+
 - Compliance reporting
 - Customer service inquiries
 - Fraud detection
@@ -645,7 +676,7 @@ Events provide a complete audit trail of all sale lifecycle operations, enabling
   "customerName": "John Doe",
   "branchId": "BRANCH-001",
   "branchName": "Downtown Store",
-  "totalAmount": 930.00,
+  "totalAmount": 930.0,
   "itemCount": 2,
   "createdAt": "2026-04-02T10:15:30.123Z"
 }
@@ -663,8 +694,8 @@ Events provide a complete audit trail of all sale lifecycle operations, enabling
   "timestamp": "2026-04-02T14:30:00.456Z",
   "saleId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "saleNumber": "SALE-2026-001",
-  "oldTotalAmount": 930.00,
-  "newTotalAmount": 1050.00,
+  "oldTotalAmount": 930.0,
+  "newTotalAmount": 1050.0,
   "modifiedAt": "2026-04-02T14:30:00.456Z"
 }
 ```
@@ -681,7 +712,7 @@ Events provide a complete audit trail of all sale lifecycle operations, enabling
   "timestamp": "2026-04-02T16:45:00.789Z",
   "saleId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "saleNumber": "SALE-2026-001",
-  "totalAmount": 1050.00,
+  "totalAmount": 1050.0,
   "cancelledAt": "2026-04-02T16:45:00.789Z"
 }
 ```
@@ -701,7 +732,7 @@ Events provide a complete audit trail of all sale lifecycle operations, enabling
   "productId": "PROD-001",
   "productName": "Product A",
   "quantity": 5,
-  "totalAmount": 450.00,
+  "totalAmount": 450.0,
   "cancelledAt": "2026-04-02T15:20:00.321Z"
 }
 ```
@@ -743,51 +774,56 @@ The Sales API implements **efficient pagination** with **flexible ordering** and
 #### **Core Components** (`Common/Pagination/`)
 
 **`PagedResult<T>.cs`** - Generic pagination response container
+
 ```csharp
 public class PagedResult<T> { public List<T> Items { get; set; } = new(); public int PageNumber { get; set; } public int PageSize { get; set; } public int TotalCount { get; set; } public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize); public bool HasPreviousPage => PageNumber > 1; public bool HasNextPage => PageNumber < TotalPages; public int FirstItemOnPage => TotalCount == 0 ? 0 : (PageNumber - 1) * PageSize + 1; public int LastItemOnPage => Math.Min(PageNumber * PageSize, TotalCount); }
 ```
+
 **Reason**: Provides all necessary pagination metadata for clients to build UI pagination controls.
 
 #### **API Usage Examples**
 
 **Example 1: Basic Pagination**
+
 ```http
 GET /api/sales?pageNumber=1&pageSize=10
 ```
 
 **Example 2: Order by Total Amount (Descending)**
+
 ```http
 GET /api/sales?pageNumber=1&pageSize=10&orderBy=totalamount&isDescending=true
 ```
 
 **Example 3: Include Cancelled Sales**
+
 ```http
 GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 ```
 
-
-
 ### **Sortable Fields**
 
-| Field Name | Data Type | Index | Description |
-|------------|-----------|-------|-------------|
-| **SaleDate** | DateTime | ✅ Yes | Transaction date |
-| **SaleNumber** | String | ✅ Yes (Unique) | Business identifier |
-| **TotalAmount** | Decimal | ❌ No | Sale total |
-| **CustomerName** | String | ❌ No | Customer name (denormalized) |
-| **BranchName** | String | ❌ No | Branch name (denormalized) |
-| **CreatedAt** | DateTime | ✅ Yes | System creation timestamp |
+| Field Name       | Data Type | Index           | Description                  |
+| ---------------- | --------- | --------------- | ---------------------------- |
+| **SaleDate**     | DateTime  | ✅ Yes          | Transaction date             |
+| **SaleNumber**   | String    | ✅ Yes (Unique) | Business identifier          |
+| **TotalAmount**  | Decimal   | ❌ No           | Sale total                   |
+| **CustomerName** | String    | ❌ No           | Customer name (denormalized) |
+| **BranchName**   | String    | ❌ No           | Branch name (denormalized)   |
+| **CreatedAt**    | DateTime  | ✅ Yes          | System creation timestamp    |
 
 **Default Ordering**: If no `orderBy` is specified, results are sorted by `CreatedAt` descending (newest first).
 
 ### **Performance Considerations**
 
 ✅ **Efficient SQL Generation**:
+
 - Single optimized query with proper JOIN
 - Count calculated before pagination
 - Uses existing indexes for fast sorting
 
 ✅ **Query Optimization**:
+
 - Eager loading prevents N+1 queries
 - Page size capped at 100 for performance
 - Indexed fields provide faster sorting
@@ -797,13 +833,16 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 **Pagination Tests**: **40 tests** covering all scenarios
 
 **Unit Tests** (18 tests):
+
 - `PagedResultTests.cs` - 12 tests for pagination calculations
 - `PaginationRequestTests.cs` - 6 tests for validation
 
 **Integration Tests** (14 tests):
+
 - `SaleRepositoryPaginationTests.cs` - Repository pagination with database
 
 **Functional Tests** (8 tests):
+
 - `SalesControllerPaginationTests.cs` - End-to-end API pagination
 
 ---
@@ -820,7 +859,7 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 
 ```
          🔺
-        /  \ 
+        /  \
        /F15 \    Functional Tests (15) - Full API stack
       /______\
      /        \
@@ -838,6 +877,7 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 #### **Domain Entity Tests**
 
 **`SaleTests.cs`** (8 tests):
+
 - ✅ `Constructor_ShouldInitializeWithDefaultValues` - Verifies proper initialization
 - ✅ `CalculateTotalAmount_ShouldSumAllNonCancelledItems` - Tests calculation logic
 - ✅ `CalculateTotalAmount_IgnoresCancelledItems` - Tests filtering logic
@@ -848,6 +888,7 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 - ✅ `Validate_WithFutureSaleDate_ShouldReturnInvalid` - Tests date validation
 
 **`SaleItemTests.cs`** (10 tests):
+
 - ✅ `Constructor_ShouldInitializeWithDefaultValues`
 - ✅ `CalculateDiscount_WithQuantityBelow4_ShouldHaveNoDiscount` (Theory: 1, 2, 3)
 - ✅ `CalculateDiscount_WithQuantity4To9_ShouldHave10PercentDiscount` (Theory: 4, 5, 9)
@@ -859,6 +900,7 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 - ✅ `Validate_WithDiscountOnLessThan4Items_ShouldReturnInvalid`
 
 **`PagedResultTests.cs`** (12 tests):
+
 - ✅ `FirstItemOnPage_OnFirstPage_ShouldBe1`
 - ✅ `FirstItemOnPage_OnSecondPage_ShouldBe11`
 - ✅ `FirstItemOnPage_WithZeroCount_ShouldBeZero`
@@ -871,8 +913,7 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 - ✅ `TotalPages_WithExactDivision_ShouldCalculateCorrectly`
 - ✅ `TotalPages_WithRemainder_ShouldRoundUp`
 - ✅ `TotalPages_WithZeroCount_ShouldReturnZero`
-- 
-**`PaginationRequestTests Passed`** (12 tests):
+- **`PaginationRequestTests Passed`** (12 tests):
 - ✅ `Constructor_ShouldInitializeWithDefaultValues`
 - ✅ `PageSize_WhenSetAbove100_ShouldCapAt100`
 - ✅ `PageSize_WhenSetBelow100_ShouldKeepValue`
@@ -886,8 +927,8 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 - ✅ `PageSize_WithValuesAbove100_ShouldCapAt100(pageSize: 101)`
 - ✅ `PageSize_WithValuesAbove100_ShouldCapAt100(pageSize: 200)`
 
+**Why Theory Tests**:
 
-**Why Theory Tests**: 
 - Test multiple scenarios with different inputs
 - Ensure discount calculation works for all quantity ranges
 - Verify edge cases (boundaries)
@@ -895,14 +936,17 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 #### **Specification Tests**
 
 **`ActiveSaleSpecificationTests.cs`** (2 tests):
+
 - ✅ `IsSatisfiedBy_WithActiveSale_ShouldReturnTrue`
 - ✅ `IsSatisfiedBy_WithCancelledSale_ShouldReturnFalse`
 
 **`SaleItemQuantitySpecificationTests.cs`** (2 tests):
+
 - ✅ `IsSatisfiedBy_WithValidQuantity_ShouldReturnTrue` (Theory: 1, 10, 20)
 - ✅ `IsSatisfiedBy_WithInvalidQuantity_ShouldReturnFalse` (Theory: 0, -1, 21, 100)
 
 **`SaleItemDiscountSpecificationTests.cs`** (5 tests):
+
 - ✅ `IsSatisfiedBy_WithQuantityBelow4AndNoDiscount_ShouldReturnTrue`
 - ✅ `IsSatisfiedBy_WithQuantity4To9And10PercentDiscount_ShouldReturnTrue`
 - ✅ `IsSatisfiedBy_WithQuantity10To20And20PercentDiscount_ShouldReturnTrue`
@@ -912,11 +956,13 @@ GET /api/sales?pageNumber=1&pageSize=10&includeCancelled=true
 #### **Handler Tests**
 
 **`CreateSaleHandlerTests.cs`** (3 tests):
+
 - ✅ `Handle_WithValidCommand_ShouldCreateSale` - Tests happy path
 - ✅ `Handle_WithDuplicateSaleNumber_ShouldThrowException` - Tests duplicate detection
 - ✅ `Handle_WithInvalidCommand_ShouldThrowValidationException` - Tests validation
 
 **Uses NSubstitute** for mocking:
+
 ```csharp
 _saleRepository = Substitute.For<ISaleRepository>();
 _mapper = Substitute.For<IMapper>();
@@ -924,10 +970,12 @@ _logger = Substitute.For<ILogger<CreateSaleHandler>>();
 ```
 
 **`GetSaleHandlerTests.cs`** (2 tests):
+
 - ✅ `Handle_WithExistingSale_ShouldReturnSale`
 - ✅ `Handle_WithNonExistingSale_ShouldThrowKeyNotFoundException`
 
 **`CancelSaleHandlerTests.cs`** (3 tests):
+
 - ✅ `Handle_WithActiveSale_ShouldCancelSale`
 - ✅ `Handle_WithAlreadyCancelledSale_ShouldThrowException`
 - ✅ `Handle_WithNonExistingSale_ShouldThrowKeyNotFoundException`
@@ -937,6 +985,7 @@ _logger = Substitute.For<ILogger<CreateSaleHandler>>();
 **Total**: 18 tests testing repository with actual database
 
 **`SaleRepositoryTests.cs`**:
+
 - ✅ `CreateAsync_ShouldAddSaleToDatabase` - Tests insert with relationships
 - ✅ `GetByIdAsync_WithExistingSale_ShouldReturnSaleWithItems` - Tests eager loading
 - ✅ `GetBySaleNumberAsync_WithExistingSaleNumber_ShouldReturnSale` - Tests unique constraint
@@ -949,6 +998,7 @@ _logger = Substitute.For<ILogger<CreateSaleHandler>>();
 - ✅ `Transaction_ShouldRollbackOnError` - Tests transaction behavior
 
 **`SaleRepositoryPaginationTests.cs`**:
+
 - ✅ `GetPagedAsync_OnLastPage_ShouldReturnPartialResults`
 - ✅ `CreateSale_WithInvalidData_ShouldReturn400BadRequest`
 - ✅ `GetPagedAsync_ShouldReturnCorrectPage`
@@ -964,6 +1014,7 @@ _logger = Substitute.For<ILogger<CreateSaleHandler>>();
 - ✅ `GetPagedAsync_WithOrderByTotalAmountDescending_ShouldSortCorrectly`
 
 **Uses EF Core In-Memory Database**:
+
 ```csharp
 var options = new DbContextOptionsBuilder<DefaultContext>()
     .UseInMemoryDatabase(databaseName: $"TestDb_{Guid.NewGuid()}")
@@ -977,6 +1028,7 @@ var options = new DbContextOptionsBuilder<DefaultContext>()
 **Total**: 14 tests testing complete API stack end-to-end
 
 **`SalesControllerTests.cs`**:
+
 - ✅ `CreateSale_WithValidData_ShouldReturn201Created`
 - ✅ `CreateSale_WithInvalidData_ShouldReturn400BadRequest`
 - ✅ `GetSale_WithExistingSale_ShouldReturn200OK`
@@ -986,6 +1038,7 @@ var options = new DbContextOptionsBuilder<DefaultContext>()
 - ✅ `DeleteSale_WithExistingSale_ShouldReturn200OK`
 
 **`SalesControllerPaginationTests.cs`**:
+
 - ✅ `ListSales_WithSecondPage_ShouldReturnCorrectPage`
 - ✅ `ListSales_WithIncludeCancelled_ShouldReturnCancelledSales`
 - ✅ `ListSales_WithInvalidOrderBy_ShouldUseDefaultOrdering`
@@ -995,11 +1048,12 @@ var options = new DbContextOptionsBuilder<DefaultContext>()
 - ✅ `ListSales_WithPagination_ShouldReturnPagedResults`
 
 **Uses WebApplicationFactory**:
+
 ```csharp
 public class SalesControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly HttpClient _client;
-    
+
     public SalesControllerTests(WebApplicationFactory<Program> factory)
     {
         _client = factory.CreateClient();
@@ -1008,12 +1062,13 @@ public class SalesControllerTests : IClassFixture<WebApplicationFactory<Program>
 ```
 
 **WebApplicationFactory.cs** - Custom Test Server:
+
 ```csharp
-public class WebApplicationFactory<TProgram> : 
+public class WebApplicationFactory<TProgram> :
     Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<TProgram>
 {
     private static readonly string DatabaseName = $"InMemoryDbForTesting_{Guid.NewGuid()}";
-    
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -1028,7 +1083,8 @@ public class WebApplicationFactory<TProgram> :
 }
 ```
 
-**Why Shared Database Name**: 
+**Why Shared Database Name**:
+
 - **Problem**: Each HTTP request was creating a new database instance
 - **Solution**: Use static shared database name so POST and GET requests use same data
 - **Result**: Tests can create data and then retrieve it successfully
@@ -1062,11 +1118,13 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 #### **Functional Test Project** (`Ambev.DeveloperEvaluation.Functional.csproj`)
 
 **Added Packages**:
+
 ```xml
 <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.11" />
 ```
 
 **Added Configuration**:
+
 ```xml
 <PropertyGroup>
     <PreserveCompilationContext>true</PreserveCompilationContext>
@@ -1074,11 +1132,13 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 ```
 
 **Changed SDK**:
+
 ```xml
 <Project Sdk="Microsoft.NET.Sdk.Web">
 ```
 
-**Reason**: 
+**Reason**:
+
 - `PreserveCompilationContext` required for `WebApplicationFactory` to generate `testhost.deps.json`
 - `Microsoft.NET.Sdk.Web` SDK required for web application testing
 - `EntityFrameworkCore.InMemory` for in-memory database in tests
@@ -1091,24 +1151,26 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 #### **Security Issue**
 
-| Aspect | Details |
-|--------|---------|
-| **Component** | AutoMapper |
-| **Previous Version** | < 15.1.1 |
-| **Vulnerability** | CVE-2026-32933 |
-| **Severity** | **High** |
-| **Issue** | AutoMapper Vulnerable to Denial of Service (DoS) via Uncontrolled Recursion |
-| **Discovery Date** | Q1 2026 |
-| **Fix Applied** | April 2026 |
+| Aspect               | Details                                                                     |
+| -------------------- | --------------------------------------------------------------------------- |
+| **Component**        | AutoMapper                                                                  |
+| **Previous Version** | < 15.1.1                                                                    |
+| **Vulnerability**    | CVE-2026-32933                                                              |
+| **Severity**         | **High**                                                                    |
+| **Issue**            | AutoMapper Vulnerable to Denial of Service (DoS) via Uncontrolled Recursion |
+| **Discovery Date**   | Q1 2026                                                                     |
+| **Fix Applied**      | April 2026                                                                  |
 
 #### **Resolution**
 
 **Updated Version**: **AutoMapper 16.1.1**
 
 **Files Modified**:
+
 1. `src/Ambev.DeveloperEvaluation.Application/Ambev.DeveloperEvaluation.Application.csproj`
 
 **Changes**:
+
 ```xml
 <!-- Before -->
 <PackageReference Include="AutoMapper" Version="13.0.1" />
@@ -1122,17 +1184,20 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 #### **Impact Analysis**
 
 ✅ **No Breaking Changes**:
+
 - All existing mapping configurations continue to work
 - No code modifications required
 - All tests pass without changes
 
 ✅ **Benefits**:
+
 - Fixed security vulnerabilities
 - Improved performance
 - Better null reference handling
 - Enhanced debugging capabilities
 
 ✅ **Verification**:
+
 ```powershell
 # Verify all tests still pass
 dotnet test
@@ -1142,12 +1207,14 @@ dotnet test
 #### **Why This Matters**
 
 **Risk Mitigation**:
+
 - Prevents potential remote code execution attacks
 - Ensures compliance with security standards
 - Protects customer data
 - Maintains trust in the application
 
 **Best Practice**:
+
 - Regular dependency updates
 - Security vulnerability scanning
 - Staying current with patch releases
@@ -1172,7 +1239,7 @@ CREATE TABLE "Sales" (
     "CancelledAt" timestamp NULL,
     "CreatedAt" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" timestamp NULL,
-    
+
     CONSTRAINT "CK_Sales_TotalAmount" CHECK ("TotalAmount" >= 0)
 );
 
@@ -1199,19 +1266,19 @@ CREATE TABLE "SaleItems" (
     "TotalAmount" decimal(18,2) NOT NULL,
     "IsCancelled" boolean NOT NULL DEFAULT false,
     "CancelledAt" timestamp NULL,
-    
-    CONSTRAINT "FK_SaleItems_Sales" 
-        FOREIGN KEY ("SaleId") 
-        REFERENCES "Sales"("Id") 
+
+    CONSTRAINT "FK_SaleItems_Sales"
+        FOREIGN KEY ("SaleId")
+        REFERENCES "Sales"("Id")
         ON DELETE CASCADE,
-    
-    CONSTRAINT "CK_SaleItems_Quantity" 
+
+    CONSTRAINT "CK_SaleItems_Quantity"
         CHECK ("Quantity" > 0 AND "Quantity" <= 20),
-    CONSTRAINT "CK_SaleItems_UnitPrice" 
+    CONSTRAINT "CK_SaleItems_UnitPrice"
         CHECK ("UnitPrice" > 0),
-    CONSTRAINT "CK_SaleItems_Discount" 
+    CONSTRAINT "CK_SaleItems_Discount"
         CHECK ("Discount" >= 0 AND "Discount" <= 0.20),
-    CONSTRAINT "CK_SaleItems_TotalAmount" 
+    CONSTRAINT "CK_SaleItems_TotalAmount"
         CHECK ("TotalAmount" >= 0)
 );
 
@@ -1261,16 +1328,19 @@ CREATE INDEX "IX_SaleItems_IsCancelled" ON "SaleItems" ("IsCancelled");
 ### **Design Rationale**
 
 **Primary Keys**:
+
 - UUID (GUID) for distributed system compatibility
 - No sequential IDs that could leak business information
 
 **Denormalization** (External Identity Pattern):
+
 - CustomerId + CustomerName
 - BranchId + BranchName
 - ProductId + ProductName
 - **Reason**: Improves query performance, reduces joins, caches data for historical accuracy
 
 **Indexes**:
+
 - SaleNumber (unique) - Fast lookup by business key
 - CustomerId, BranchId - Customer/branch queries
 - ProductId - Product sales reports
@@ -1278,12 +1348,14 @@ CREATE INDEX "IX_SaleItems_IsCancelled" ON "SaleItems" ("IsCancelled");
 - IsCancelled - Active sales queries
 
 **Constraints**:
+
 - Quantity: 1-20 (business rule enforcement at DB level)
 - UnitPrice > 0 (prevents negative prices)
 - Discount: 0-20% (matches business rule)
 - TotalAmount >= 0 (prevents negative totals)
 
 **Cascade Delete**:
+
 - ON DELETE CASCADE for SaleItems
 - **Reason**: When a sale is deleted, all items should be removed automatically
 
@@ -1318,16 +1390,17 @@ dotnet ef database update PreviousMigrationName `
 
 ### **Prerequisites**
 
-| Tool | Version | Download |
-|------|---------|----------|
-| .NET SDK | 8.0+ | https://dotnet.microsoft.com/download |
-| PostgreSQL | 13+ | https://www.postgresql.org/download/ |
-| Visual Studio | 2022/2026 | https://visualstudio.microsoft.com/ |
-| Git | Latest | https://git-scm.com/downloads |
+| Tool          | Version   | Download                              |
+| ------------- | --------- | ------------------------------------- |
+| .NET SDK      | 8.0+      | https://dotnet.microsoft.com/download |
+| PostgreSQL    | 13+       | https://www.postgresql.org/download/  |
+| Visual Studio | 2022/2026 | https://visualstudio.microsoft.com/   |
+| Git           | Latest    | https://git-scm.com/downloads         |
 
 ### **Installation Steps**
 
 #### **1. Clone Repository**
+
 ```powershell
 git clone https://github.com/leandrovmoura/DeveloperStore
 cd DeveloperStore/template/backend
@@ -1336,6 +1409,7 @@ cd DeveloperStore/template/backend
 #### **2. Configure Database**
 
 **Option A: appsettings.json** (Quick start)
+
 ```json
 {
   "ConnectionStrings": {
@@ -1345,6 +1419,7 @@ cd DeveloperStore/template/backend
 ```
 
 **Option B: User Secrets** (Recommended for development)
+
 ```powershell
 cd src/Ambev.DeveloperEvaluation.WebApi
 dotnet user-secrets init
@@ -1353,16 +1428,19 @@ dotnet user-secrets set "Jwt:SecretKey" "your-secret-key-at-least-32-characters-
 ```
 
 #### **3. Restore Dependencies**
+
 ```powershell
 dotnet restore
 ```
 
 #### **4. Build Solution**
+
 ```powershell
 dotnet build
 ```
 
 #### **5. Run Migrations**
+
 ```powershell
 dotnet ef migrations add AddSalesEntities `
   --project src/Ambev.DeveloperEvaluation.WebApi `
@@ -1374,11 +1452,13 @@ dotnet ef database update `
 ```
 
 #### **6. Run Application**
+
 ```powershell
 dotnet run --project src/Ambev.DeveloperEvaluation.WebApi
 ```
 
 **Output**:
+
 ```
 info: Microsoft.Hosting.Lifetime[14]
       Now listening on: https://localhost:7000
@@ -1391,11 +1471,13 @@ info: Microsoft.Hosting.Lifetime[0]
 Open browser: **https://localhost:7000/swagger**
 
 #### **8. Run Tests**
+
 ```powershell
 dotnet test
 ```
 
 **Expected Output**:
+
 ```
 Passed!  - Failed:     0, Passed:    38, Skipped:     0, Total:    38
 ```
@@ -1407,6 +1489,7 @@ Passed!  - Failed:     0, Passed:    38, Skipped:     0, Total:    38
 ### **Example 1: Create Sale**
 
 **Request**:
+
 ```http
 POST https://localhost:7000/api/sales
 Content-Type: application/json
@@ -1436,6 +1519,7 @@ Content-Type: application/json
 ```
 
 **Response** (201 Created):
+
 ```json
 {
   "success": true,
@@ -1448,25 +1532,25 @@ Content-Type: application/json
     "customerName": "John Doe",
     "branchId": "BRANCH-001",
     "branchName": "Downtown Store",
-    "totalAmount": 4740.00,
+    "totalAmount": 4740.0,
     "items": [
       {
         "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
         "productId": "PROD-001",
         "productName": "Laptop",
         "quantity": 5,
-        "unitPrice": 1000.00,
-        "discount": 0.10,
-        "totalAmount": 4500.00
+        "unitPrice": 1000.0,
+        "discount": 0.1,
+        "totalAmount": 4500.0
       },
       {
         "id": "8d0f778a-8536-51ef-855c-f18fd2g01bf8",
         "productId": "PROD-002",
         "productName": "Mouse",
         "quantity": 12,
-        "unitPrice": 25.00,
-        "discount": 0.20,
-        "totalAmount": 240.00
+        "unitPrice": 25.0,
+        "discount": 0.2,
+        "totalAmount": 240.0
       }
     ]
   }
@@ -1474,6 +1558,7 @@ Content-Type: application/json
 ```
 
 **Discount Calculation**:
+
 - **Laptop**: 5 units × $1,000 = $5,000 → 10% discount = $4,500
 - **Mouse**: 12 units × $25 = $300 → 20% discount = $240
 - **Total**: $4,740
@@ -1481,11 +1566,13 @@ Content-Type: application/json
 ### **Example 2: Get Sale**
 
 **Request**:
+
 ```http
 GET https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -1503,11 +1590,13 @@ GET https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ### **Example 3: List Sales**
 
 **Request**:
+
 ```http
 GET https://localhost:7000/api/sales?includeCancelled=false
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -1519,7 +1608,7 @@ GET https://localhost:7000/api/sales?includeCancelled=false
       "saleDate": "2026-04-02T10:00:00Z",
       "customerId": "CUST-123",
       "customerName": "John Doe",
-      "totalAmount": 4740.00,
+      "totalAmount": 4740.0,
       "isCancelled": false,
       "itemCount": 2
     }
@@ -1530,6 +1619,7 @@ GET https://localhost:7000/api/sales?includeCancelled=false
 ### **Example 4: Update Sale**
 
 **Request**:
+
 ```http
 PUT https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 Content-Type: application/json
@@ -1551,13 +1641,14 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
   "message": "Sale updated successfully",
   "data": {
     "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "totalAmount": 5400.00,
+    "totalAmount": 5400.0,
     "updatedAt": "2026-04-02T14:30:00Z"
   }
 }
@@ -1566,11 +1657,13 @@ Content-Type: application/json
 ### **Example 5: Cancel Sale**
 
 **Request**:
+
 ```http
 POST https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6/cancel
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -1581,11 +1674,13 @@ POST https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6/cance
 ### **Example 6: Cancel Item**
 
 **Request**:
+
 ```http
 POST https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6/items/7c9e6679-7425-40de-944b-e07fc1f90ae7/cancel
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -1596,11 +1691,13 @@ POST https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6/items
 ### **Example 7: Delete Sale**
 
 **Request**:
+
 ```http
 DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "success": true,
@@ -1611,6 +1708,7 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ### **Error Responses**
 
 **400 Bad Request** (Validation Error):
+
 ```json
 {
   "success": false,
@@ -1625,6 +1723,7 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 **404 Not Found**:
+
 ```json
 {
   "success": false,
@@ -1633,6 +1732,7 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ```
 
 **500 Internal Server Error**:
+
 ```json
 {
   "success": false,
@@ -1646,40 +1746,43 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ### **Files Created** (80+ new files)
 
-| Layer | Files Created |
-|-------|---------------|
-| **Domain** | 18 files (Entities, Validators, Specifications, Events, Repositories) |
+| Layer           | Files Created                                                         |
+| --------------- | --------------------------------------------------------------------- |
+| **Domain**      | 18 files (Entities, Validators, Specifications, Events, Repositories) |
 | **Application** | 35 files (Commands, Queries, Handlers, Validators, Profiles, Results) |
-| **WebApi** | 15 files (Controller, DTOs, Profiles, Validators) |
-| **ORM** | 3 files (Repository, Configurations) |
-| **Tests** | 10 test classes (156 test methods) |
+| **WebApi**      | 15 files (Controller, DTOs, Profiles, Validators)                     |
+| **ORM**         | 3 files (Repository, Configurations)                                  |
+| **Tests**       | 10 test classes (156 test methods)                                    |
 
 ### **Files Modified**
 
-| File | Changes |
-|------|---------|
-| `DefaultContext.cs` | Added `DbSet<Sale>` and `DbSet<SaleItem>` |
-| `InfrastructureModuleInitializer.cs` | Registered `ISaleRepository` |
-| `ValidationExceptionMiddleware.cs` | Enhanced exception handling |
-| `Program.cs` | AutoMapper configuration fix |
-| **3 .csproj files** | AutoMapper version upgrade to 13.0.1 |
-| **3 test .csproj files** | Added test dependencies |
+| File                                 | Changes                                   |
+| ------------------------------------ | ----------------------------------------- |
+| `DefaultContext.cs`                  | Added `DbSet<Sale>` and `DbSet<SaleItem>` |
+| `InfrastructureModuleInitializer.cs` | Registered `ISaleRepository`              |
+| `ValidationExceptionMiddleware.cs`   | Enhanced exception handling               |
+| `Program.cs`                         | AutoMapper configuration fix              |
+| **3 .csproj files**                  | AutoMapper version upgrade to 13.0.1      |
+| **3 test .csproj files**             | Added test dependencies                   |
 
 ### **Key Improvements**
 
 ✅ **Business Value**:
+
 - Complete sales management capability
 - Automatic discount calculation
 - Comprehensive audit trail
 - Data integrity enforcement
 
 ✅ **Technical Excellence**:
+
 - Clean Architecture implementation
 - 100% test coverage for critical paths
 - Security vulnerability fix
 - Production-ready error handling
 
 ✅ **Maintainability**:
+
 - Clear separation of concerns
 - Consistent coding patterns
 - Comprehensive documentation
@@ -1689,24 +1792,25 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 
 ## 📊 Project Statistics
 
-| Metric | Value |
-|--------|-------|
-| **Total Files Created/Modified** | 85+ |
-| **Lines of Code Added** | ~8,500 |
-| **Test Coverage** | 90%+ |
-| **API Endpoints** | 7 |
-| **CQRS Handlers** | 7 |
-| **Domain Events** | 4 |
-| **Specifications** | 3 |
-| **Validators** | 4 |
-| **Tests Written** | 38 |
-| **Tests Passing** | 38 (100%) ✅ |
+| Metric                           | Value        |
+| -------------------------------- | ------------ |
+| **Total Files Created/Modified** | 85+          |
+| **Lines of Code Added**          | ~8,500       |
+| **Test Coverage**                | 90%+         |
+| **API Endpoints**                | 7            |
+| **CQRS Handlers**                | 7            |
+| **Domain Events**                | 4            |
+| **Specifications**               | 3            |
+| **Validators**                   | 4            |
+| **Tests Written**                | 38           |
+| **Tests Passing**                | 38 (100%) ✅ |
 
 ---
 
 ## 🙏 Acknowledgments
 
 **Frameworks & Libraries**:
+
 - .NET 8 - Microsoft
 - Entity Framework Core - Microsoft
 - MediatR - Jimmy Bogard
@@ -1714,19 +1818,13 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 - AutoMapper - Jimmy Bogard
 - Serilog - Serilog Contributors
 
-**Architecture Inspirations**:
-- Clean Architecture - Robert C. Martin
-- Domain-Driven Design - Eric Evans
-- CQRS Pattern - Greg Young
-
 ---
 
 ## 📞 Contact & Support
 
 **Repository**: https://github.com/leandrovmoura/DeveloperStore  
 **Branch**: main  
-**Author**: Leandro Moura  
-**Email**: leandrovmoura@example.com
+**Author**: Leandro Moura
 
 **For Issues**: Create an issue on GitHub  
 **For Questions**: Open a discussion on GitHub
@@ -1734,9 +1832,8 @@ DELETE https://localhost:7000/api/sales/3fa85f64-5717-4562-b3fc-2c963f66afa6
 ---
 
 **Last Updated**: April 2, 2026  
-**Version**: 2.0.0  
-**Status**: Production Ready ✅
+**Version**: 2.0.0
 
 ---
 
-**🎉 DeveloperStore Sales Management System - Built with Clean Architecture and Best Practices**
+**DeveloperStore Sales Management System - Built with Clean Architecture and Best Practices**
