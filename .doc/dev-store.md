@@ -5,7 +5,6 @@
 **DeveloperStore** is a backend application built with **.NET 8** that implements a complete **Sales Management System** following **Clean Architecture**, **Domain-Driven Design (DDD)**, and **CQRS** patterns. This implementation provides a robust, scalable, and maintainable solution for managing sales transactions with comprehensive business rules and full test coverage.
 
 **Repository**: https://github.com/leandrovmoura/DeveloperStore  
-**Location**: `\template\backend\`  
 **Branch**: `main`
 
 ---
@@ -37,7 +36,7 @@ This release introduces a **complete Sales CRUD API** with the following capabil
 The solution follows **Clean Architecture** principles with clear separation of concerns:
 
 ```
-📁 DeveloperStore/template/backend/
+📁 DeveloperStore/
 │
 ├── 📁 src/                                        # Source Code
 │   ├── 📁 Ambev.DeveloperEvaluation.Domain/       # Business Logic (Core)
